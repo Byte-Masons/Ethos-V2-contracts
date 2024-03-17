@@ -5,6 +5,7 @@ const MockChainlink = artifacts.require("./MockAggregator.sol")
 const MockTellor = artifacts.require("./MockTellor.sol")
 const TellorCaller = artifacts.require("./TellorCaller.sol")
 const ERC20 = artifacts.require("ERC20Mock.sol");
+const NonPayable = artifacts.require("./NonPayable.sol")
 
 const testHelpers = require("../utils/testHelpers.js")
 const th = testHelpers.TestHelper
@@ -38,13 +39,18 @@ contract('PriceFeed', async accounts => {
     collateral1 = await ERC20.new("Wrapped Ether", "wETH", 12, multisig, 0); // 12 decimal places
     collateral2 = await ERC20.new("Wrapped Bitcoin", "wBTC", 8, multisig, 0); // 8 decimal places
     collateralConfig = await CollateralConfig.new()
+    const mockActivePool = await NonPayable.new()
+    const mockPriceFeed = await NonPayable.new()
     CollateralConfig.setAsDeployed(collateralConfig)
     await collateralConfig.initialize(
       [collateral1.address, collateral2.address],
       [toBN(dec(12, 17)), toBN(dec(13, 17))], // MCR for WETH at 120%, and for WBTC at 130%
       [toBN(dec(165, 16)), toBN(dec(18, 17))], // CCR for WETH at 165%, and for WBTC at 180%
       [ethers.constants.MaxUint256, ethers.constants.MaxUint256],
-      [14400, 14400] // 4 hour oracle timeouts
+      [14400, 14400], // 4 hour Chainlink timeouts
+      [14400, 14400], // 4 hour Tellor timeouts
+      mockActivePool.address,
+      mockPriceFeed.address,
     )
   })
 

@@ -140,7 +140,8 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
     function updateChainlinkAggregator(
         address _collateral,
         address _priceAggregatorAddress
-    ) external onlyOwner {
+    ) external override {
+        _requireCallerIsOwnerOrCollateralConfig();
         _requireValidCollateralAddress(_collateral);
         checkContract(_priceAggregatorAddress);
         priceAggregator[_collateral] = AggregatorV3Interface(_priceAggregatorAddress);
@@ -166,6 +167,16 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
     ) external onlyOwner {
         checkContract(_tellorCallerAddress);
         tellorCaller = ITellorCaller(_tellorCallerAddress);
+    }
+
+    // Admin function to update the Tellor query ID for a particular collateral.
+    //
+    // !!!PLEASE USE EXTREME CARE AND CAUTION!!!
+    function updateTellorQueryID(address _collateral, bytes32 _queryId) external override {
+        _requireCallerIsOwnerOrCollateralConfig();
+        _requireValidCollateralAddress(_collateral);
+        require(_queryId != bytes32(0), "Invalid Tellor Query ID");
+        tellorQueryId[_collateral] = _queryId;
     }
 
     // --- Functions ---
@@ -419,7 +430,7 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
     }
 
     function _chainlinkIsFrozen(ChainlinkResponse memory _response, address _collateral) internal view returns (bool) {
-        return block.timestamp.sub(_response.timestamp) > collateralConfig.getCollateralOracleTimeout(_collateral);
+        return block.timestamp.sub(_response.timestamp) > collateralConfig.getCollateralChainlinkTimeout(_collateral);
     }
 
     function _chainlinkPriceChangeAboveMax(ChainlinkResponse memory _currentResponse, ChainlinkResponse memory _prevResponse) internal pure returns (bool) {
@@ -452,7 +463,7 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
     }
 
      function _tellorIsFrozen(TellorResponse  memory _tellorResponse, address _collateral) internal view returns (bool) {
-        return block.timestamp.sub(_tellorResponse.timestamp) > collateralConfig.getCollateralOracleTimeout(_collateral);
+        return block.timestamp.sub(_tellorResponse.timestamp) > collateralConfig.getCollateralTellorTimeout(_collateral);
     }
 
     function _bothOraclesLiveAndUnbrokenAndSimilarPrice
@@ -491,7 +502,7 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
         uint percentPriceDifference = maxPrice.sub(minPrice).mul(DECIMAL_PRECISION).div(minPrice);
 
         /*
-        * Return true if the relative price difference is <= 3%: if so, we assume both oracles are probably reporting
+        * Return true if the relative price difference is <= 5%: if so, we assume both oracles are probably reporting
         * the honest market price, as it is unlikely that both have been broken/hacked and are still in-sync.
         */
         return percentPriceDifference <= MAX_PRICE_DIFFERENCE_BETWEEN_ORACLES;
@@ -639,5 +650,9 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, IPriceFeed {
     function _requireValidCollateralAddress(address _collateral) internal view {
         require(collateralConfig.isCollateralAllowed(_collateral), "Invalid collateral address");
     }
-}
 
+    function _requireCallerIsOwnerOrCollateralConfig() internal view {
+        require(msg.sender == owner() || msg.sender == address(collateralConfig),
+            "PriceFeed: Caller is neither owner no CollateralConfig");
+    }
+}

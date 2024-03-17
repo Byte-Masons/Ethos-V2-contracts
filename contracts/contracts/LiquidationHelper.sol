@@ -345,7 +345,7 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
             );
         }
 
-        require(totals.totalDebtInSequence > 0);
+        require(totals.totalDebtInSequence > 0, "LiquidationHelper: Total debt in sequence cannot be zero");
 
         // Move liquidated collateral and LUSD to the appropriate pools
         stabilityPoolCached.offset(_collateral, totals.totalDebtToOffset, totals.totalCollToSendToSP);
@@ -510,7 +510,7 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
     * Attempt to liquidate a custom list of troves (for the specified collateral) provided by the caller.
     */
     function batchLiquidateTroves(address _collateral, address[] memory _troveArray, address _caller) public override {
-        require(_troveArray.length != 0);
+        require(_troveArray.length != 0, "LiquidationHelper: No troves given");
         _requireCallerIsTroveManager();
 
         IActivePool activePoolCached = activePool;
@@ -549,7 +549,7 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
             );
         }
 
-        require(totals.totalDebtInSequence > 0);
+        require(totals.totalDebtInSequence > 0, "LiquidationHelper: Total debt in sequence cannot be zero");
 
         // Move liquidated collateral and LUSD to the appropriate pools
         stabilityPoolCached.offset(_collateral, totals.totalDebtToOffset, totals.totalCollToSendToSP);
@@ -694,8 +694,10 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
     // --- Liquidation helper functions ---
 
     function _addLiquidationValuesToTotals(LiquidationTotals memory oldTotals, LiquidationValues memory singleLiquidation)
-    internal pure returns(LiquidationTotals memory newTotals) {
-
+        internal
+        pure
+        returns(LiquidationTotals memory newTotals)
+    {
         // Tally all the values with their respective running totals
         newTotals.totalCollGasCompensation = oldTotals.totalCollGasCompensation.add(singleLiquidation.collGasCompensation);
         newTotals.totalLUSDGasCompensation = oldTotals.totalLUSDGasCompensation.add(singleLiquidation.LUSDGasCompensation);
@@ -720,7 +722,7 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
     )
         internal
         pure
-    returns (bool)
+        returns (bool)
     {
         uint TCR = LiquityMath._computeCR(_entireSystemColl, _entireSystemDebt, _price, _collDecimals);
 
@@ -729,10 +731,11 @@ contract LiquidationHelper is LiquityBase, Ownable, ILiquidationHelper {
 
     // --- 'require' wrapper functions ---
     function _requireTroveIsActive(address _borrower, address _collateral) internal view {
-        require(troveManager.getTroveStatus(_borrower, _collateral) == uint(TroveStatus.active));
+        require(troveManager.getTroveStatus(_borrower, _collateral) == uint(TroveStatus.active),
+            "LiquidationHelper: Trove not active");
     }
 
     function _requireCallerIsTroveManager() internal view {
-        require(msg.sender == address(troveManager));
+        require(msg.sender == address(troveManager), "LiquidationHelper: Caller is not TroveManager");
     }
 }

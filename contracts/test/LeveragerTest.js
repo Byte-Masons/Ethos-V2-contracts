@@ -3,18 +3,19 @@ const { TestHelper: th } = require("../utils/testHelpers.js")
 const { dec, assertRevert } = th
 const { ethers, network, assert } = require("hardhat")
 
-const IWethMinimal = [
+const IERC20Minimal = [
   "function approve(address, uint256) external",
   "function balanceOf(address) external view returns (uint256)",
   "function transfer(address, uint256) external",
-  "function deposit() external payable",
 ]
+
+const contractIfForking = hre.network.config.forking ? contract.only : contract.skip
 
 // Because this test is the only one to fork and simulate an upgrade as opposed to a fresh deployment,
 // it requires a different hardhat configuration in order to run.
-// To run this test, change `skip` to `only` on the following line then run the command:
+// To run this test, run the command:
 // `npx hardhat test --config hardhat.config.mainnet-fork.js`
-contract.skip('Leverager', async accounts => {
+contractIfForking('Leverager', async accounts => {
   const [deployer, whale] = accounts
   let deployerWallet
   let whaleWallet
@@ -43,8 +44,8 @@ contract.skip('Leverager', async accounts => {
 
     deployerWallet = (await ethers.getSigners())[0]
     collateral = new ethers.Contract(
-      (await contracts.collateralConfig.collaterals(1)), // WETH
-      IWethMinimal,
+      (await contracts.collateralConfig.collaterals(2)), // WSTETH
+      IERC20Minimal,
       deployerWallet
     )
 
@@ -58,7 +59,6 @@ contract.skip('Leverager', async accounts => {
   it('Levers up with 1 iteration', async () => {
     const ethPrice = await contracts.priceFeed.callStatic.fetchPrice(collateral.address)
     const collAmount = ethers.utils.parseEther("1000").mul(ethers.utils.parseEther("1")).div(ethPrice)
-    await collateral.deposit({ value: collAmount })
     await contracts.leverager.leverToTargetCRWithNIterations(
       collateral.address,
       ethers.utils.parseEther("1.3"),
@@ -67,7 +67,7 @@ contract.skip('Leverager', async accounts => {
       ethers.utils.parseEther("0.005"),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      ethers.utils.parseEther("1.03"),
+      ethers.utils.parseEther("0.993"),
       ethers.utils.parseEther("0.99")
     )
 
@@ -86,7 +86,6 @@ contract.skip('Leverager', async accounts => {
   it('Levers up with 2 iterations', async () => {
     const ethPrice = await contracts.priceFeed.callStatic.fetchPrice(collateral.address)
     const collAmount = ethers.utils.parseEther("1000").mul(ethers.utils.parseEther("1")).div(ethPrice)
-    await collateral.deposit({ value: collAmount })
     await contracts.leverager.leverToTargetCRWithNIterations(
       collateral.address,
       ethers.utils.parseEther("1.3"),
@@ -95,7 +94,7 @@ contract.skip('Leverager', async accounts => {
       ethers.utils.parseEther("0.005"),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      ethers.utils.parseEther("1.03"),
+      ethers.utils.parseEther("0.993"),
       ethers.utils.parseEther("0.99")
     )
 
@@ -118,10 +117,9 @@ contract.skip('Leverager', async accounts => {
     const ethPrice = await contracts.priceFeed.callStatic.fetchPrice(collateral.address)
 
     // need at least one other open trove in order to close
-    await collateral.connect(whaleWallet).deposit({ value: ethers.utils.parseEther("10") })
     await contracts.borrowerOperations.connect(whaleWallet).openTrove(
       collateral.address,
-      ethers.utils.parseEther("10"),
+      ethers.utils.parseEther("1"),
       ethers.utils.parseEther("0.005"),
       ethers.utils.parseEther("100"),
       ZERO_ADDRESS,
@@ -130,7 +128,6 @@ contract.skip('Leverager', async accounts => {
 
     // lever up
     const collAmount = ethers.utils.parseEther("1000").mul(ethers.utils.parseEther("1")).div(ethPrice)
-    await collateral.deposit({ value: collAmount })
     await contracts.leverager.leverToTargetCRWithNIterations(
       collateral.address,
       ethers.utils.parseEther("1.3"),
@@ -139,7 +136,7 @@ contract.skip('Leverager', async accounts => {
       ethers.utils.parseEther("0.005"),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      ethers.utils.parseEther("1.03"),
+      ethers.utils.parseEther("0.993"),
       ethers.utils.parseEther("0.99")
     )
 
@@ -161,12 +158,13 @@ contract.skip('Leverager', async accounts => {
 
     // delever
     const ernBalance = await contracts.lusdToken.balanceOf(deployer)
+    const initialCollBal = await collateral.balanceOf(deployer)
     await contracts.leverager.deleverAndCloseTrove(
       collateral.address,
       ernBalance,
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      ethers.utils.parseEther("1.03"),
+      ethers.utils.parseEther("0.993"),
       ethers.utils.parseEther("0.99")
     )
 
@@ -179,9 +177,9 @@ contract.skip('Leverager', async accounts => {
     assert.equal(await collateral.balanceOf(contracts.leverager.address), 0)
     assert.equal(await contracts.lusdToken.balanceOf(contracts.leverager.address), 0)
 
-    const dollarValueRecovered = (await contracts.lusdToken.balanceOf(deployer)).add(
-      (await collateral.balanceOf(deployer)).mul(ethPrice).div(ethers.utils.parseEther("1")))
-    th.assertIsApproximatelyEqual(dollarValueRecovered, ethers.utils.parseEther("1000"), Number(dec(50, 18)))
+    const dollarValueRecovered = (await contracts.lusdToken.balanceOf(deployer)).mul(ethers.utils.parseEther("0.98686")).div(ethers.utils.parseEther("1"))
+      .add((await collateral.balanceOf(deployer)).sub(initialCollBal).mul(ethPrice).div(ethers.utils.parseEther("1")))
+    th.assertIsApproximatelyEqual(dollarValueRecovered, ethers.utils.parseEther("1000"), Number(dec(25, 18)))
   })
 
   it('Reverts with too many iterations', async () => {
@@ -194,7 +192,7 @@ contract.skip('Leverager', async accounts => {
       ethers.utils.parseEther("0.005"),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      ethers.utils.parseEther("1.03"),
+      ethers.utils.parseEther("0.993"),
       ethers.utils.parseEther("0.99")
     ), "Leverager: Too many iterations")
   })

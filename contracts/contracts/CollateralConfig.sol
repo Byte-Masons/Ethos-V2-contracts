@@ -6,6 +6,8 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/Ownable.sol";
 import "./Dependencies/SafeERC20.sol";
 import "./Interfaces/ICollateralConfig.sol";
+import "./Interfaces/IActivePool.sol";
+import "./Interfaces/IPriceFeed.sol";
 
 /**
  * Houses whitelist of allowed collaterals (ERC20s) for the entire system. Also provides access to collateral-specific
@@ -30,11 +32,15 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         uint256 MCR;
         uint256 CCR;
         uint256 debtLimit;
-        uint256 oracleTimeout;
+        uint256 chainlinkTimeout;
+        uint256 tellorTimeout;
     }
 
     address[] public collaterals; // for returning entire list of allowed collaterals
     mapping (address => Config) public collateralConfig; // for O(1) checking of collateral's validity and properties
+
+    IActivePool public activePool;
+    IPriceFeed public priceFeed;
 
     event CollateralWhitelisted(
         address _collateral,
@@ -42,10 +48,12 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         uint256 _MCR,
         uint256 _CCR,
         uint256 _debtLimit,
-        uint256 _oracleTimeout
+        uint256 _chainlinkTimeout,
+        uint256 _tellorTimeout
     );
     event CollateralRatiosUpdated(address _collateral, uint256 _MCR, uint256 _CCR);
     event CollateralDebtLimitUpdated(address _collateral, uint256 _debtLimit);
+    event CollateralOracleTimeoutsUpdated(address _collateral, uint256 _chainlinkTimeout, uint256 _tellorTimeout);
 
     /**
      * @notice One-time owner-only initializer.
@@ -53,7 +61,7 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
      * @param _MCRs Ordered list of minimum collateralization ratio (MCR) for each of the collaterals.
      * @param _CCRs Ordered list of critical collateralization ratio (CCR) for each of the collaterals.
      * @param _debtLimits Ordered list of debt limits (prevents minting after being reached) for each of the collaterals.
-     * @param _oracleTimeouts Ordered list of oracle timeouts (number of seconds after which price is considered
+     * @param _chainlinkTimeouts Ordered list of Chainlink timeouts (number of seconds after which price is considered
      * stale) for each of the collaterals.
      */
     function initialize(
@@ -61,18 +69,27 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         uint256[] calldata _MCRs,
         uint256[] calldata _CCRs,
         uint256[] calldata _debtLimits,
-        uint256[] calldata _oracleTimeouts
-    ) external override onlyOwner {
+        uint256[] calldata _chainlinkTimeouts,
+        uint256[] calldata _tellorTimeouts,
+        address _activePool,
+        address _priceFeed
+    ) external onlyOwner {
         require(!initialized, "Can only initialize once");
         require(_collaterals.length != 0, "At least one collateral required");
         require(_MCRs.length == _collaterals.length, "Array lengths must match");
         require(_CCRs.length == _collaterals.length, "Array lenghts must match");
         require(_debtLimits.length == _collaterals.length, "Array lengths must match");
-        require(_oracleTimeouts.length == _collaterals.length, "Array lengths must match");
-        
+        require(_chainlinkTimeouts.length == _collaterals.length, "Array lengths must match");
+        require(_tellorTimeouts.length == _collaterals.length, "Array lengths must match");
+
         for(uint256 i = 0; i < _collaterals.length; i++) {
-            addNewCollateral(_collaterals[i], _MCRs[i], _CCRs[i], _debtLimits[i], _oracleTimeouts[i]);
+            _addNewCollateral(_collaterals[i], _MCRs[i], _CCRs[i], _debtLimits[i], _chainlinkTimeouts[i], _tellorTimeouts[i]);
         }
+
+        checkContract(_activePool);
+        checkContract(_priceFeed);
+        activePool = IActivePool(_activePool);
+        priceFeed = IPriceFeed(_priceFeed);
 
         initialized = true;
     }
@@ -82,12 +99,31 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         uint256 _MCR,
         uint256 _CCR,
         uint256 _debtLimit,
-        uint256 _oracleTimeout
-    ) public onlyOwner {
+        uint256 _chainlinkTimeout,
+        uint256 _tellorTimeout,
+        address _vault,
+        address _chainlinkAggregator,
+        bytes32 _tellorQueryId
+    ) external onlyOwner {
+        _addNewCollateral(_collateral, _MCR, _CCR, _debtLimit, _chainlinkTimeout, _tellorTimeout);
+        activePool.setYieldGenerator(_collateral, _vault);
+        priceFeed.updateChainlinkAggregator(_collateral, _chainlinkAggregator);
+        priceFeed.updateTellorQueryID(_collateral, _tellorQueryId);
+    }
+
+    function _addNewCollateral(
+        address _collateral,
+        uint256 _MCR,
+        uint256 _CCR,
+        uint256 _debtLimit,
+        uint256 _chainlinkTimeout,
+        uint256 _tellorTimeout
+    ) internal {
         require(_collateral != address(0), "cannot be 0 address");
         require(_MCR >= MIN_ALLOWED_MCR, "MCR below allowed minimum");
         require(_CCR >= MIN_ALLOWED_CCR, "CCR below allowed minimum");
-        require(_oracleTimeout > 20 minutes, "Timeout too low");
+        require(_chainlinkTimeout != 0, "No Chainlink timeout specified");
+        require(_tellorTimeout > 20 minutes, "Tellor timeout too low");
         Config storage config = collateralConfig[_collateral];
         require(!config.allowed, "collateral already allowed");
 
@@ -100,9 +136,10 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         config.CCR = _CCR;
         uint256 decimals = IERC20(_collateral).decimals();
         config.decimals = decimals;
-        config.oracleTimeout = _oracleTimeout;
+        config.chainlinkTimeout = _chainlinkTimeout;
+        config.tellorTimeout = _tellorTimeout;
 
-        emit CollateralWhitelisted(_collateral, decimals, _MCR, _CCR, _debtLimit, _oracleTimeout);
+        emit CollateralWhitelisted(_collateral, decimals, _MCR, _CCR, _debtLimit, _chainlinkTimeout, _tellorTimeout);
     }
 
     function updateCollateralDebtLimit(
@@ -139,6 +176,19 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         emit CollateralRatiosUpdated(_collateral, _MCR, _CCR);
     }
 
+    function updateCollateralOracleTimeouts(
+        address _collateral,
+        uint256 _chainlinkTimeout,
+        uint256 _tellorTimeout
+    ) external onlyOwner checkCollateral(_collateral) {
+        require(_chainlinkTimeout != 0, "No Chainlink timeout specified");
+        require(_tellorTimeout > 20 minutes, "Tellor timeout too low");
+        Config storage config = collateralConfig[_collateral];
+        config.chainlinkTimeout = _chainlinkTimeout;
+        config.tellorTimeout = _tellorTimeout;
+        emit CollateralOracleTimeoutsUpdated(_collateral, _chainlinkTimeout, _tellorTimeout);
+    }
+
     function getAllowedCollaterals() external override view returns (address[] memory) {
         return collaterals;
     }
@@ -171,10 +221,16 @@ contract CollateralConfig is ICollateralConfig, CheckContract, Ownable {
         return collateralConfig[_collateral].debtLimit;
     }
 
-    function getCollateralOracleTimeout(
+    function getCollateralChainlinkTimeout(
         address _collateral
     ) external override view checkCollateral(_collateral) returns (uint256) {
-        return collateralConfig[_collateral].oracleTimeout;
+        return collateralConfig[_collateral].chainlinkTimeout;
+    }
+
+    function getCollateralTellorTimeout(
+        address _collateral
+    ) external override view checkCollateral(_collateral) returns (uint256) {
+        return collateralConfig[_collateral].tellorTimeout;
     }
 
     modifier checkCollateral(address _collateral) {

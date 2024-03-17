@@ -6,7 +6,7 @@ import "../LQTY/LQTYStaking.sol";
 
 
 contract LQTYStakingTester is LQTYStaking {
-    function requireCallerIsTroveMorRH() external view {
-        _requireCallerIsTroveMorRH();
+    function requireCallerIsRedemptionHelper() external view {
+        _requireCallerIsRedemptionHelper();
     }
 }

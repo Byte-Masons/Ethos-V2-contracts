@@ -1,7 +1,6 @@
 const CollateralConfig = artifacts.require("./CollateralConfig.sol")
 const SortedTroves = artifacts.require("./SortedTroves.sol")
 const TroveManager = artifacts.require("./TroveManager.sol")
-const RewarderManager = artifacts.require("./RewarderManager.sol")
 const RedemptionHelper = artifacts.require("./RedemptionHelper.sol")
 const LiquidationHelper = artifacts.require("./LiquidationHelper.sol")
 const PriceFeedTestnet = artifacts.require("./PriceFeedTestnet.sol")
@@ -32,6 +31,8 @@ const LiquityMathTester = artifacts.require("./LiquityMathTester.sol")
 const BorrowerOperationsTester = artifacts.require("./BorrowerOperationsTester.sol")
 const TroveManagerTester = artifacts.require("./TroveManagerTester.sol")
 const LUSDTokenTester = artifacts.require("./LUSDTokenTester.sol")
+
+const NonPayable = artifacts.require("./NonPayable.sol")
 
 // Proxy scripts
 const BorrowerOperationsScript = artifacts.require('BorrowerOperationsScript')
@@ -98,7 +99,6 @@ class DeploymentHelper {
     const priceFeedTestnet = await PriceFeedTestnet.new()
     const sortedTroves = await SortedTroves.new()
     const troveManager = await TroveManager.new()
-    const rewarderManager = await RewarderManager.new()
     const redemptionHelper = await RedemptionHelper.new()
     const liquidationHelper = await LiquidationHelper.new()
     const activePool = await ActivePool.new()
@@ -125,7 +125,6 @@ class DeploymentHelper {
     PriceFeedTestnet.setAsDeployed(priceFeedTestnet)
     SortedTroves.setAsDeployed(sortedTroves)
     TroveManager.setAsDeployed(troveManager)
-    RewarderManager.setAsDeployed(rewarderManager)
     RedemptionHelper.setAsDeployed(redemptionHelper)
     LiquidationHelper.setAsDeployed(liquidationHelper)
     ActivePool.setAsDeployed(activePool)
@@ -145,7 +144,6 @@ class DeploymentHelper {
       lusdToken,
       sortedTroves,
       troveManager,
-      rewarderManager,
       redemptionHelper,
       liquidationHelper,
       activePool,
@@ -170,7 +168,6 @@ class DeploymentHelper {
     testerContracts.collateralConfig = await CollateralConfig.new()
     testerContracts.priceFeedTestnet = await PriceFeedTestnet.new()
     testerContracts.sortedTroves = await SortedTroves.new()
-    testerContracts.rewarderManager = await RewarderManager.new()
     testerContracts.redemptionHelper = await RedemptionHelper.new()
     testerContracts.liquidationHelper = await LiquidationHelper.new()
     // Actual tester contracts
@@ -399,14 +396,10 @@ class DeploymentHelper {
       [toBN(dec(12, 17))], // MCR for WETH at 120%
       [toBN(dec(165, 16))], // CCR for WETH at 165%
       [ethers.constants.MaxUint256], // No debt limit
-      [14400] // 4 hour oracle timeout
-    )
-    await contracts.collateralConfig.addNewCollateral(
-      contracts.collaterals[1].address,
-      toBN(dec(13, 17)), // MCR for WBTC at 130%
-      toBN(dec(18, 17)), // CCR for WBTC at 180%
-      ethers.constants.MaxUint256, // No debt limit
-      14400 // 4 hour oracle timeout
+      [14400], // 4 hour Chainlink timeout
+      [14400], // 4 hour Tellor timeout
+      contracts.activePool.address,
+      contracts.priceFeedTestnet.address,
     )
 
     // set TroveManager addr in SortedTroves
@@ -432,13 +425,8 @@ class DeploymentHelper {
       contracts.sortedTroves.address,
       LQTYContracts.stakingToken.address,
       LQTYContracts.lqtyStaking.address,
-      contracts.rewarderManager.address,
       contracts.redemptionHelper.address,
       contracts.liquidationHelper.address,
-    )
-
-    await contracts.rewarderManager.setAddresses(
-      contracts.troveManager.address,
     )
 
     await contracts.redemptionHelper.setAddresses(
@@ -502,7 +490,7 @@ class DeploymentHelper {
       contracts.defaultPool.address,
       contracts.collSurplusPool.address,
       contracts.governance.address, // using governance as treasury
-      contracts.reapervaults.map(v => v.address),
+      [contracts.reapervaults[0].address],
     )
 
     await contracts.defaultPool.setAddresses(
@@ -524,6 +512,19 @@ class DeploymentHelper {
       contracts.collateralConfig.address,
       contracts.sortedTroves.address,
       contracts.troveManager.address,
+    )
+
+    const mockChainlinkAggregator = await NonPayable.new()
+    await contracts.collateralConfig.addNewCollateral(
+      contracts.collaterals[1].address,
+      toBN(dec(13, 17)), // MCR for WBTC at 130%
+      toBN(dec(18, 17)), // CCR for WBTC at 180%
+      ethers.constants.MaxUint256, // No debt limit
+      14400, // 4 hour Chainlink timeout
+      14400, // 4 hour Tellor timeout
+      contracts.reapervaults[1].address,
+      mockChainlinkAggregator.address,
+      "0x1", // mock Tellor query ID
     )
   }
 

@@ -10,7 +10,7 @@ contract CommunityIssuanceTester is CommunityIssuance {
             uint256 endTimestamp = block.timestamp > lastDistributionTime ? lastDistributionTime : block.timestamp;
             uint256 timePassed = endTimestamp.sub(lastIssuanceTimestamp);
             issuance = getRewardAmount(timePassed);
-            totalOATHIssued = totalOATHIssued.add(issuance);
+            totalOATHIssued[oathToken] = totalOATHIssued[oathToken].add(issuance);
         }
 
         lastIssuanceTimestamp = block.timestamp;

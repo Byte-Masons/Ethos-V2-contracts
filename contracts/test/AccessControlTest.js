@@ -520,7 +520,7 @@ contract('Access Control: Liquity functions with the caller restricted to Liquit
   })
 
   describe('LQTYStaking', async accounts => {
-    it("increaseF_LUSD(): reverts when caller is neither TroveM nor RH", async () => {
+    it("increaseF_LUSD(): reverts when caller is not RedemptionHelper", async () => {
       try {
         const txAlice = await lqtyStaking.increaseF_LUSD(dec(1, 18), { from: alice })
         

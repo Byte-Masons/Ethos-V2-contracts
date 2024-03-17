@@ -16,4 +16,5 @@ interface IActivePool is IPool {
     // --- Functions ---
     function sendCollateral(address _collateral, address _account, uint _amount) external;
     function pullCollateralFromBorrowerOperationsOrDefaultPool(address _collateral, uint _amount) external;
+    function setYieldGenerator(address _collateral, address _vault) external;
 }

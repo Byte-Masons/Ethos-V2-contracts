@@ -1,9 +1,9 @@
 let isTest
 
 const externalAddrs  = {
-  TELLOR_MASTER:"0xD9157453E2668B2fc45b7A803D3FEF3642430cC0",
-  OATH: "0x39FdE572a18448F8139b7788099F0a0740f51205",
-  STAKING_TOKEN: "0x99184713bad36bdcbC31453670FBB0D2eC3Cfcc4",
+  TELLOR_MASTER:"0x8cFc184c877154a8F9ffE0fe75649dbe5e2DBEbf",
+  OATH: "0x00e1724885473B63bCE08a9f0a52F35b0979e35A",
+  STAKING_TOKEN: "0xD13D81aF624956327A24d0275CBe54b0eE0E9070",
   SWAPPER: "0x1FFa0AF1Fa5bdfca491a21BD4Eab55304c623ab8",
   VELO_ROUTER: "0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858",
   BALANCER_VAULT: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
@@ -16,7 +16,8 @@ const collaterals = [
     MCR: "1.1", // 1.1 ether = 110%
     CCR: "1.35", // 1.35 ether = 135%
     limit: "115792089237316195423570985008687907853269984665640564039457584007913129639935", // uint256 max
-    timeout: 14400, // 4 hours
+    chainlinkTimeout: 14400, // 4 hours
+    tellorTimeout: 14400, // 4 hours
     chainlinkAggregatorAddress: "0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593",
     tellorQueryID: "0xa6f013ee236804827b77696d350e9f0ac3e879328f2a3021d473a0b778ad78ac",
     reaperVaultAddress: "0x3aA179c2F70D1D022afBc1f779177b8739Cc45D1"
@@ -26,7 +27,8 @@ const collaterals = [
     MCR: "1.08", // 1.08 ether = 108%
     CCR: "1.2", // 1.2 ether = 120%
     limit: "115792089237316195423570985008687907853269984665640564039457584007913129639935", // uint256 max
-    timeout: 14400, // 4 hours
+    chainlinkTimeout: 14400, // 4 hours
+    tellorTimeout: 14400, // 4 hours
     chainlinkAggregatorAddress: "0x13e3Ee699D1909E989722E753853AE30b17e08c5",
     tellorQueryID: "0x83a7f3d48786ac2667503a61e8c415438ed2922eb86a2906e4ee66d9a2ce4992",
     reaperVaultAddress: "0x099913e22a0dB0E3e6D8A67506e46DC168fa0174"
@@ -41,7 +43,7 @@ const liquityAddrs = {
   LUSD_TOKEN: "0xc5b001DC33727F8F26880B184090D3E252470D45",
 }
 
-const OUTPUT_FILE = './mainnetDeployment/localForkDeploymentOutput.json'
+const OUTPUT_FILE = './mainnetDeployment/localForkUpgradeOutput.json'
 
 const waitFunction = async () => {
   // Fast forward time 1000s (local mainnet fork only)

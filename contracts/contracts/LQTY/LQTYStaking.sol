@@ -184,7 +184,7 @@ contract LQTYStaking is ILQTYStaking, Ownable, CheckContract, BaseMath {
     // --- Reward-per-unit-staked increase functions. Called by Liquity core contracts ---
 
     function increaseF_Collateral(address _collateral, uint _collFee) external override {
-        _requireCallerIsTroveMorRH();
+        _requireCallerIsRedemptionHelper();
         uint collFeePerLQTYStaked;
      
         if (totalLQTYStaked != 0) {
@@ -261,11 +261,9 @@ contract LQTYStaking is ILQTYStaking, Ownable, CheckContract, BaseMath {
 
     // --- 'require' functions ---
 
-    function _requireCallerIsTroveMorRH() internal view {
+    function _requireCallerIsRedemptionHelper() internal view {
         require(
-            msg.sender == troveManagerAddress ||
-            msg.sender == redemptionHelperAddress,
-            "LQTYStaking: caller is neither TroveM nor RH"
+            msg.sender == redemptionHelperAddress, "LQTYStaking: caller is not RedemptionHelper"
         );
     }
 

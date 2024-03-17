@@ -114,7 +114,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
 
       // Get G and communityIssuance before
       const G_Before = await stabilityPool.epochToScaleToG(0, 0)
-      const OATHIssuedBefore = await communityIssuanceTester.totalOATHIssued()
+      const OATHIssuedBefore = await communityIssuanceTester.totalOATHIssued(oathToken.address)
 
       assert.isTrue(G_Before.gt(toBN(0)))
       assert.isTrue(OATHIssuedBefore.gt(toBN(0)))
@@ -127,7 +127,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
 
       // Check G and LQTYIssued increase slightly
       const G_After = await stabilityPool.epochToScaleToG(0, 0)
-      const OATHIssuedAfter = await communityIssuanceTester.totalOATHIssued()
+      const OATHIssuedAfter = await communityIssuanceTester.totalOATHIssued(oathToken.address)
 
       assert.isTrue(G_After.gt(G_Before))
       assert.isTrue(OATHIssuedAfter.gt(OATHIssuedBefore))
@@ -144,7 +144,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
 
     // Simple case: 3 depositors, equal stake. No liquidations.
     it("withdrawFromSP(): Depositors with equal initial deposit withdraw correct OATH gain. No liquidations.", async () => {
-      const initialIssuance = await communityIssuanceTester.totalOATHIssued()
+      const initialIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.equal(initialIssuance, 0)
 
       // Whale opens Trove with 10k ETH
@@ -225,7 +225,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
 
     // 3 depositors, varied stake. No liquidations.
     it("withdrawFromSP(): Depositors with varying initial deposit withdraw correct OATH gain. No liquidations.", async () => {
-      const initialIssuance = await communityIssuanceTester.totalOATHIssued()
+      const initialIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.equal(initialIssuance, 0)
 
       // Whale opens Trove with 10k ETH
@@ -322,7 +322,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
 
     // A, B, C deposit. Varied stake. 1 Liquidation. D joins.
     it("withdrawFromSP(): Depositors with varying initial deposit withdraw correct OATH gain. No liquidations.", async () => {
-      const initialIssuance = await communityIssuanceTester.totalOATHIssued()
+      const initialIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.equal(initialIssuance, 0)
 
       // Whale opens Trove with 10k ETH
@@ -460,7 +460,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
     G,H deposits 100C
     L4 cancels 200C */
     it('withdrawFromSP(): Depositor withdraws correct OATH gain after serial pool-emptying liquidations.', async () => {
-      const initialIssuance = await communityIssuanceTester.totalOATHIssued()
+      const initialIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.equal(initialIssuance, 0)
 
       // Whale opens Trove with 10k ETH
@@ -594,7 +594,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
       await borrowerOperations.openTrove(collaterals[0].address, dec(100, collDecimals), th._100pct, dec(10000, 18), B, B, { from: B })
       await borrowerOperations.openTrove(collaterals[0].address, dec(200, collDecimals), th._100pct, dec(16000, 18), C, C, { from: C })
 
-      const totalOATHissuance_0 = await communityIssuanceTester.totalOATHIssued()
+      const totalOATHissuance_0 = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       const G_0 = await stabilityPool.epochToScaleToG(0, 0)  // epochs and scales will not change in this test: no liquidations
       assert.equal(totalOATHissuance_0, '0')
       assert.equal(G_0, '0')
@@ -610,7 +610,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
       assert.isTrue(G_1.eq(G_0))
 
       // Check total OATH issued is updated
-      const totalOATHissuance_1 = await communityIssuanceTester.totalOATHIssued()
+      const totalOATHissuance_1 = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.isTrue(totalOATHissuance_1.gt(totalOATHissuance_0))
 
       // 1 day passes (D2)
@@ -624,7 +624,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
       assert.isTrue(G_2.gt(G_1))
 
       // Check total OATH issued is updated
-      const totalOATHissuance_2 = await communityIssuanceTester.totalOATHIssued()
+      const totalOATHissuance_2 = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.isTrue(totalOATHissuance_2.gt(totalOATHissuance_1))
 
       // 1 day passes (D3)
@@ -638,7 +638,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
       assert.isTrue(G_3.eq(G_2))
 
       // Check total OATH issued is updated
-      const totalOATHissuance_3 = await communityIssuanceTester.totalOATHIssued()
+      const totalOATHissuance_3 = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.isTrue(totalOATHissuance_3.gt(totalOATHissuance_2))
 
       // 1 day passes (D4)
@@ -652,7 +652,7 @@ contract('StabilityPool - OATH Rewards', async accounts => {
       assert.isTrue(G_4.gt(G_3))
 
       // Check total OATH issued is increased
-      const totalOATHissuance_4 = await communityIssuanceTester.totalOATHIssued()
+      const totalOATHissuance_4 = await communityIssuanceTester.totalOATHIssued(oathToken.address)
       assert.isTrue(totalOATHissuance_4.gt(totalOATHissuance_3))
 
       // Get OATH Gains

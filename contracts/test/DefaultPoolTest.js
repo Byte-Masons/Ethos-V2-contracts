@@ -22,6 +22,7 @@ contract('DefaultPool', async accounts => {
   let mockCollSurplusPool
   let collateral
   let mockTreasury
+  let mockPriceFeed
 
   let [owner] = accounts
 
@@ -36,6 +37,7 @@ contract('DefaultPool', async accounts => {
     mockStabilityPool = await NonPayable.new()
     mockCollSurplusPool = await NonPayable.new()
     mockTreasury = await NonPayable.new()
+    mockPriceFeed = await NonPayable.new()
 
     collateral = await ERC20.new("Wrapped Ether", "wETH", 12, mockTreasury.address, 0);
     const vault = await ReaperVaultV2.new(collateral.address, "wETH Crypt", "rfwETH");
@@ -45,7 +47,10 @@ contract('DefaultPool', async accounts => {
       [toBN(dec(12, 17))], // MCR for WETH at 120%
       [toBN(dec(165, 16))], // CCR for WETH at 165%
       [ethers.constants.MaxUint256],
-      [14400] // 4 hour oracle timeout
+      [14400], // 4 hour Chainlink timeout
+      [14400], // 4 hour Tellor timeouts
+      activePool.address,
+      mockPriceFeed.address,
     )
     await defaultPool.setAddresses(collateralConfig.address, mockTroveManager.address, activePool.address)
     await activePool.setAddresses(collateralConfig.address, mockBorrowerOps.address, mockTroveManager.address,

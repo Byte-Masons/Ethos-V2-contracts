@@ -11,7 +11,8 @@ const collaterals = [
     MCR: "1.2", // 1.2 ether = 120%
     CCR: "1.5", // 1.5 ether = 150%
     limit: "115792089237316195423570985008687907853269984665640564039457584007913129639935", // uint256 max
-    timeout: 14400, // 4 hours
+    chainlinkTimeout: 14400, // 4 hours
+    tellorTimeout: 14400, // 4 hours
     chainlinkAggregatorAddress: "0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593",
     tellorQueryID: "0xa6f013ee236804827b77696d350e9f0ac3e879328f2a3021d473a0b778ad78ac",
     reaperVaultAddress: "0x3aA179c2F70D1D022afBc1f779177b8739Cc45D1"
@@ -21,7 +22,8 @@ const collaterals = [
     MCR: "1.08", // 1.08 ether = 108%
     CCR: "1.2", // 1.2 ether = 120%
     limit: "115792089237316195423570985008687907853269984665640564039457584007913129639935", // uint256 max
-    timeout: 14400, // 4 hours
+    chainlinkTimeout: 14400, // 4 hours
+    tellorTimeout: 14400, // 4 hours
     chainlinkAggregatorAddress: "0x13e3Ee699D1909E989722E753853AE30b17e08c5",
     tellorQueryID: "0x83a7f3d48786ac2667503a61e8c415438ed2922eb86a2906e4ee66d9a2ce4992",
     reaperVaultAddress: "0x099913e22a0dB0E3e6D8A67506e46DC168fa0174"

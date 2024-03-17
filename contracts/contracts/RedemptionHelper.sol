@@ -176,7 +176,7 @@ contract RedemptionHelper is LiquityBase, Ownable, IRedemptionHelper {
             totals.remainingLUSD = totals.remainingLUSD.sub(singleRedemption.LUSDLot);
             totals.currentBorrower = nextUserToCheck;
         }
-        require(totals.totalCollateralDrawn > 0);
+        require(totals.totalCollateralDrawn > 0, "RedemptionHelper: Total collateral drawn cannot be zero");
 
         // Decay the baseRate due to time passed, and then increase it according to the size of this redemption.
         // Use the saved total LUSD supply value, from before it was reduced by the redemption.
@@ -301,23 +301,25 @@ contract RedemptionHelper is LiquityBase, Ownable, IRedemptionHelper {
     }
 
     function _requireValidMaxFeePercentage(uint _maxFeePercentage) internal view {
-        require(_maxFeePercentage >= troveManager.REDEMPTION_FEE_FLOOR() && _maxFeePercentage <= DECIMAL_PRECISION);
+        require(_maxFeePercentage >= troveManager.REDEMPTION_FEE_FLOOR() && _maxFeePercentage <= DECIMAL_PRECISION,
+            "RedemptionHelper: Invalid maxFeePercentage");
     }
 
     function _requireAfterBootstrapPeriod() internal view {
         uint systemDeploymentTime = lusdToken.getDeploymentStartTime();
-        require(block.timestamp >= systemDeploymentTime.add(BOOTSTRAP_PERIOD));
+        require(block.timestamp >= systemDeploymentTime.add(BOOTSTRAP_PERIOD),
+            "RedemptionHelper: Bootstrap period has not passed");
     }
 
     function _requireTCRoverMCR(address _collateral, uint _price, uint256 _collDecimals, uint256 _MCR) internal view {
-        require(_getTCR(_collateral, _price, _collDecimals) >= _MCR);
+        require(_getTCR(_collateral, _price, _collDecimals) >= _MCR, "RedemptionHelper: TCR < MCR");
     }
 
     function _requireAmountGreaterThanZero(uint _amount) internal pure {
-        require(_amount > 0);
+        require(_amount > 0, "RedemptionHelper: Amount cannot be zero");
     }
 
     function _requireLUSDBalanceCoversRedemption(ILUSDToken _lusdToken, address _redeemer, uint _amount) internal view {
-        require(_lusdToken.balanceOf(_redeemer) >= _amount);
+        require(_lusdToken.balanceOf(_redeemer) >= _amount, "RedemptionHelper: Not enough LUSD for redemption");
     }
 }

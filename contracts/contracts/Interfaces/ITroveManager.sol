@@ -36,7 +36,6 @@ interface ITroveManager is ILiquityBase {
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
     event LQTYTokenAddressChanged(address _lqtyTokenAddress);
     event LQTYStakingAddressChanged(address _lqtyStakingAddress);
-    event RewarderManagerAddressChanged(address _rewarderManagerAddress);
 
     event Liquidation(address _collateral, uint _liquidatedDebt, uint _liquidatedColl, uint _collGasCompensation, uint _LUSDGasCompensation);
     event TroveUpdated(address indexed _borrower, address _collateral, uint _debt, uint _coll, uint _stake, uint8 _operation);
@@ -70,7 +69,6 @@ interface ITroveManager is ILiquityBase {
         address _sortedTrovesAddress,
         address _lqtyTokenAddress,
         address _lqtyStakingAddress,
-        address _rewarderManagerAddress,
         address _redemptionHelperAddress,
         address _liquidationHelperAddress
     ) external;

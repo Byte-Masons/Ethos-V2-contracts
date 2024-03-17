@@ -10,7 +10,6 @@ import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ILQTYStaking.sol";
 import "./Interfaces/IRedemptionHelper.sol";
 import "./Interfaces/ILiquidationHelper.sol";
-import "./Interfaces/IRewarderManager.sol";
 import "./Dependencies/LiquityBase.sol";
 // import "./Dependencies/Ownable.sol";
 import "./Dependencies/CheckContract.sol";
@@ -36,8 +35,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
     IERC20 public override lqtyToken;
 
     ILQTYStaking public override lqtyStaking;
-
-    IRewarderManager public rewarderManager;
 
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
     ISortedTroves public sortedTroves;
@@ -189,7 +186,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
     event LQTYTokenAddressChanged(address _lqtyTokenAddress);
     event LQTYStakingAddressChanged(address _lqtyStakingAddress);
-    event RewarderManagerAddressChanged(address _rewarderManagerAddress);
     event RedemptionHelperAddressChanged(address _redemptionHelperAddress);
     event LiquidationHelperAddressChanged(address _liquidationHelperAddress);
 
@@ -237,7 +233,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         address _sortedTrovesAddress,
         address _lqtyTokenAddress,
         address _lqtyStakingAddress,
-        address _rewarderManagerAddress,
         address _redemptionHelperAddress,
         address _liquidationHelperAddress
     )
@@ -257,7 +252,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         checkContract(_sortedTrovesAddress);
         checkContract(_lqtyTokenAddress);
         checkContract(_lqtyStakingAddress);
-        checkContract(_rewarderManagerAddress);
         checkContract(_redemptionHelperAddress);
         checkContract(_liquidationHelperAddress);
 
@@ -272,7 +266,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         sortedTroves = ISortedTroves(_sortedTrovesAddress);
         lqtyToken = IERC20(_lqtyTokenAddress);
         lqtyStaking = ILQTYStaking(_lqtyStakingAddress);
-        rewarderManager = IRewarderManager(_rewarderManagerAddress);
         redemptionHelper = IRedemptionHelper(_redemptionHelperAddress);
         liquidationHelper = ILiquidationHelper(_liquidationHelperAddress);
 
@@ -287,7 +280,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         emit SortedTrovesAddressChanged(_sortedTrovesAddress);
         emit LQTYTokenAddressChanged(_lqtyTokenAddress);
         emit LQTYStakingAddressChanged(_lqtyStakingAddress);
-        emit RewarderManagerAddressChanged(_rewarderManagerAddress);
         emit RedemptionHelperAddressChanged(_redemptionHelperAddress);
         emit LiquidationHelperAddressChanged(_liquidationHelperAddress);
 
@@ -403,10 +395,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         uint256 _newColl
     ) external override {
         _requireCallerIsRedemptionHelper();
-        uint256 oldDebt = Troves[_borrower][_collateral].debt;
-        uint256 oldColl = Troves[_borrower][_collateral].coll;
-        rewarderManager.onDebtDecrease(_borrower, _collateral, oldDebt.sub(_newDebt));
-        rewarderManager.onCollDecrease(_borrower, _collateral, oldColl.sub(_newColl));
         Troves[_borrower][_collateral].debt = _newDebt;
         Troves[_borrower][_collateral].coll = _newColl;
         _updateStakeAndTotalStakes(_borrower, _collateral);
@@ -527,10 +515,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
             // Compute pending rewards
             uint pendingCollateralReward = getPendingCollateralReward(_borrower, _collateral);
             uint pendingLUSDDebtReward = getPendingLUSDDebtReward(_borrower, _collateral);
-
-            // Call RewarderManager hooks
-            rewarderManager.onCollIncrease(_borrower, _collateral, pendingCollateralReward);
-            rewarderManager.onDebtIncrease(_borrower, _collateral, pendingLUSDDebtReward);
 
             // Apply pending rewards to trove's state
             Troves[_borrower][_collateral].coll = Troves[_borrower][_collateral].coll.add(pendingCollateralReward);
@@ -734,8 +718,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
 
     function _closeTrove(address _borrower, address _collateral, TroveStatus closedStatus) internal {
         assert(closedStatus != TroveStatus.nonExistent && closedStatus != TroveStatus.active);
-
-        rewarderManager.onTroveClose(_borrower, _collateral, uint(closedStatus));
 
         uint TroveOwnersArrayLength = TroveOwners[_collateral].length;
         _requireMoreThanOneTroveInSystem(TroveOwnersArrayLength, _collateral);
@@ -967,32 +949,34 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
     // --- 'require' wrapper functions ---
 
     function _requireCallerIsBorrowerOperations() internal view {
-        require(msg.sender == borrowerOperationsAddress);
+        require(msg.sender == borrowerOperationsAddress, "TroveManager: Caller is not BorrowerOperations");
     }
 
     function _requireCallerIsRedemptionHelper() internal view {
-        require(msg.sender == address(redemptionHelper));
+        require(msg.sender == address(redemptionHelper), "TroveManager: Caller is not RedemptionHelper");
     }
 
     function _requireCallerIsLiquidationHelper() internal view {
-        require(msg.sender == address(liquidationHelper));
+        require(msg.sender == address(liquidationHelper), "TroveManager: Caller is not LiquidationHelper");
     }
 
     function _requireCallerIsBorrowerOperationsOrRedemptionHelperOrLiquidationHelper() internal view {
         require(msg.sender == borrowerOperationsAddress || msg.sender == address(redemptionHelper)
-            || msg.sender == address(liquidationHelper));
+            || msg.sender == address(liquidationHelper), "TroveManager: Caller is neither BO nor RH nor LH");
     }
 
     function _requireCallerIsBorrowerOperationsOrRedemptionHelper() internal view {
-        require(msg.sender == borrowerOperationsAddress || msg.sender == address(redemptionHelper));
+        require(msg.sender == borrowerOperationsAddress || msg.sender == address(redemptionHelper),
+            "TroveManager: Caller is neither BO nor RH");
     }
 
     function _requireTroveIsActive(address _borrower, address _collateral) internal view {
-        require(Troves[_borrower][_collateral].status == TroveStatus.active);
+        require(Troves[_borrower][_collateral].status == TroveStatus.active, "TroveManager: Trove not active");
     }
 
     function _requireMoreThanOneTroveInSystem(uint TroveOwnersArrayLength, address _collateral) internal view {
-        require (TroveOwnersArrayLength > 1 && sortedTroves.getSize(_collateral) > 1);
+        require(TroveOwnersArrayLength > 1 && sortedTroves.getSize(_collateral) > 1,
+            "TroveManager: Not more than 1 trove in system");
     }
 
     // --- Trove property getters ---
@@ -1022,7 +1006,8 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
 
     function increaseTroveColl(address _borrower, address _collateral, uint _collIncrease) external override returns (uint) {
         _requireCallerIsBorrowerOperations();
-        rewarderManager.onCollIncrease(_borrower, _collateral, _collIncrease);
+        require(collateralConfig.getCollateralDebtLimit(_collateral) != 0,
+            "TroveManager: Cannot deposit collateral with debt limit of 0");
         uint newColl = Troves[_borrower][_collateral].coll.add(_collIncrease);
         Troves[_borrower][_collateral].coll = newColl;
         return newColl;
@@ -1030,7 +1015,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
 
     function decreaseTroveColl(address _borrower, address _collateral, uint _collDecrease) external override returns (uint) {
         _requireCallerIsBorrowerOperations();
-        rewarderManager.onCollDecrease(_borrower, _collateral, _collDecrease);
         uint newColl = Troves[_borrower][_collateral].coll.sub(_collDecrease);
         Troves[_borrower][_collateral].coll = newColl;
         return newColl;
@@ -1040,7 +1024,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
         _requireCallerIsBorrowerOperations();
         require(collateralConfig.getCollateralDebtLimit(_collateral) >= getEntireSystemDebt(_collateral).add(_debtIncrease),
             "TroveManager: Debt increase exceeds limit");
-        rewarderManager.onDebtIncrease(_borrower, _collateral, _debtIncrease);
         uint newDebt = Troves[_borrower][_collateral].debt.add(_debtIncrease);
         Troves[_borrower][_collateral].debt = newDebt;
         return newDebt;
@@ -1048,7 +1031,6 @@ contract TroveManager is LiquityBase, /*Ownable,*/ CheckContract, ITroveManager 
 
     function decreaseTroveDebt(address _borrower, address _collateral, uint _debtDecrease) external override returns (uint) {
         _requireCallerIsBorrowerOperations();
-        rewarderManager.onDebtDecrease(_borrower, _collateral, _debtDecrease);
         uint newDebt = Troves[_borrower][_collateral].debt.sub(_debtDecrease);
         Troves[_borrower][_collateral].debt = newDebt;
         return newDebt;

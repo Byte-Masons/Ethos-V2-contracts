@@ -40,8 +40,8 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
     /// @notice These represent the limits imposed on a regular caller of the Leverager contract.
     /// They can be fine-tuned by `owner` within hard limits specified in their respective setter functions.
     uint public maxLeverageIterations = 15;
-    uint public minERNPrice = 0.995 ether;
-    uint public maxERNPrice = 1.08 ether;
+    uint public minERNPrice = 0.99 ether;
+    uint public maxERNPrice = 1.05 ether;
     uint public minSwapPercentOut = 0.99 ether;
 
     IBorrowerOperations public borrowerOperations;
@@ -110,7 +110,7 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
     }
 
     function setMaxLeverageIterations(uint _iterations) external onlyOwner {
-        require(_iterations > 1 && _iterations <= 20, "Iterations outside allowable range");
+        require(_iterations > 1 && _iterations <= 30, "Iterations outside allowable range");
         maxLeverageIterations = _iterations;
         emit MaxLeverageIterationsChanged(_iterations);
     }
@@ -130,14 +130,11 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
 
     function setSlippageSettings(uint _minERNPrice, uint _maxERNPrice, uint _minSwapPercentOut) external onlyOwner {
         require(
-            _minERNPrice >= LiquityMath._getScaledCollAmount(99, 2)
+            _minERNPrice >= LiquityMath._getScaledCollAmount(98, 2)
                 && _maxERNPrice <= LiquityMath._getScaledCollAmount(110, 2),
-            "ERN price out of range 0.99-1.10"
+            "ERN price out of range 0.98-1.10"
         );
-        require(
-            _minSwapPercentOut >= LiquityMath.DECIMAL_PRECISION - LiquityMath.DECIMAL_PRECISION / 150,
-            "More than 1.5% slippage"
-        );
+        require(_minSwapPercentOut >= LiquityMath._getScaledCollAmount(98, 2), "More than 2% slippage + fees");
         minERNPrice = _minERNPrice;
         maxERNPrice = _maxERNPrice;
         minSwapPercentOut = _minSwapPercentOut;
@@ -289,7 +286,8 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
                         _swapPercentOut
                     )
                 );
-                _lusdAmount = _swap(address(_collateral), address(lusdToken), vars.collAmount, minAmountOut);
+                _swap(address(_collateral), address(lusdToken), vars.collAmount, minAmountOut);
+                _lusdAmount = lusdToken.balanceOf(address(this));
             }
 
             (vars.collAmount, vars.closedTrove, _upperHint, _lowerHint) = _delever(
@@ -431,7 +429,7 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
             revert("Leverager: Invalid ExchangeType");
         }
 
-        require(amountOut != 0, "Leverager: Swap failed");
+        require(amountOut >= _data.absoluteOrBPSValue, "Leverager: Swap failed");
     }
 
     function _findMinAmountOut(uint _priceOut, uint _priceIn, uint _amountIn, uint _minPercentOut)
@@ -440,7 +438,7 @@ contract Leverager is LiquityBase, Ownable, CheckContract, ILeverager {
         returns (uint)
     {
         // _amountIn * _priceIn * (_minPercentOut / DECIMAL_PRECISISION) = _amountOut * _priceOut
-        // ^ (dollar value in)    ^ (account for slippage)                 ^ (dollar value out)
+        // ^ (dollar value in)    ^ (account for slippage and fees)        ^ (dollar value out)
         // solving for _amountOut
         // _amountOut = _amountIn * _priceIn * (_minPercentOut / DECIMAL_PRECISION) / _priceOut
         return _amountIn.mul(_priceIn).mul(_minPercentOut).div(_priceOut).div(LiquityMath.DECIMAL_PRECISION);

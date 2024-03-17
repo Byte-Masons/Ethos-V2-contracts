@@ -127,7 +127,7 @@ contract('Oath community issuance tests', async accounts => {
     const blockTimestampOne = await th.getLatestBlockTimestamp(web3);
     await th.fastForwardTime(100, web3.currentProvider);
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const issuance = await communityIssuanceTester.totalOATHIssued();
+    const issuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     const blockTimestampTwo = await th.getLatestBlockTimestamp(web3);
     const difference = blockTimestampTwo - blockTimestampOne;
     const rewards = await communityIssuanceTester.getRewardAmount(difference);
@@ -140,9 +140,9 @@ contract('Oath community issuance tests', async accounts => {
     await th.fastForwardTime(1300000, web3.currentProvider);
 
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const firstIssuance = await communityIssuanceTester.totalOATHIssued();
+    const firstIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const secondIssuance = (await communityIssuanceTester.totalOATHIssued()).sub(firstIssuance);
+    const secondIssuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(firstIssuance);
 
     th.assertIsApproximatelyEqual(firstIssuance, thousand, 10**7)
     assert.isTrue(secondIssuance.eq(th.toBN(0)));
@@ -150,7 +150,7 @@ contract('Oath community issuance tests', async accounts => {
 
   it("issues 0 when the contract hasn't been funded", async () => {
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const firstIssuance = await communityIssuanceTester.totalOATHIssued();
+    const firstIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     assert.isTrue(firstIssuance.eq(th.toBN(0)));
   })
 
@@ -189,18 +189,18 @@ contract('Oath community issuance tests', async accounts => {
     await communityIssuanceTester.fund(th.toBN(dec(7000, 18)));
 
     for (let i=0; i<14; i++) {
-      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued();
+      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
       await th.fastForwardTime(86400, web3.currentProvider);
       await communityIssuanceTester.unprotectedIssueLQTY();
-      const issuance = (await communityIssuanceTester.totalOATHIssued()).sub(lastTotalIssuance);
+      const issuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(lastTotalIssuance);
       const error = issuance.sub(thousand.div(th.toBN(2)));
       assert.isTrue(error.lt(th.toBN(th.dec(1, 16)))); // expecting daily distribution of 500 OATH within error of 0.01 OATH
     }
 
-    const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued();
+    const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     await th.fastForwardTime(86400, web3.currentProvider);
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const issuance = (await communityIssuanceTester.totalOATHIssued()).sub(lastTotalIssuance);
+    const issuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(lastTotalIssuance);
     assert.isTrue(issuance.eq(th.toBN(0)));
   })
 
@@ -210,10 +210,10 @@ contract('Oath community issuance tests', async accounts => {
     await communityIssuanceTester.fund(th.toBN(dec(21000, 18)));
 
     for (let i=0; i<14; i++) {
-      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued();
+      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
       await th.fastForwardTime(86400, web3.currentProvider);
       await communityIssuanceTester.unprotectedIssueLQTY();
-      const issuance = (await communityIssuanceTester.totalOATHIssued()).sub(lastTotalIssuance);
+      const issuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(lastTotalIssuance);
       const error = issuance.sub(thousand);
       assert.isTrue(error.lt(th.toBN(th.dec(1, 17)))); // expecting daily distribution of 1000 OATH within error of 0.1 OATH
     }
@@ -222,18 +222,18 @@ contract('Oath community issuance tests', async accounts => {
     await communityIssuanceTester.fund(th.toBN(dec(21000, 18)));
 
     for (let i=0; i<21; i++) {
-      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued();
+      const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
       await th.fastForwardTime(86400, web3.currentProvider);
       await communityIssuanceTester.unprotectedIssueLQTY();
-      const issuance = (await communityIssuanceTester.totalOATHIssued()).sub(lastTotalIssuance);
+      const issuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(lastTotalIssuance);
       const error = issuance.sub(thousand.mul(th.toBN(4)).div(th.toBN(3)));
       assert.isTrue(error.lt(th.toBN(th.dec(1, 17)))); // expecting daily distribution of 1333 OATH within error of 0.1 OATH
     }
 
-    const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued();
+    const lastTotalIssuance = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     await th.fastForwardTime(86400, web3.currentProvider);
     await communityIssuanceTester.unprotectedIssueLQTY();
-    const issuance = (await communityIssuanceTester.totalOATHIssued()).sub(lastTotalIssuance);
+    const issuance = (await communityIssuanceTester.totalOATHIssued(oathToken.address)).sub(lastTotalIssuance);
     assert.isTrue(issuance.eq(th.toBN(0)));
   })
 
@@ -262,7 +262,7 @@ contract('Oath community issuance tests', async accounts => {
     await communityIssuanceTester.unprotectedIssueLQTY();
 
     // total issued should be roughly 21k + 7k + 5k
-    const totalIssued = await communityIssuanceTester.totalOATHIssued();
+    const totalIssued = await communityIssuanceTester.totalOATHIssued(oathToken.address);
     const error = th.toBN(dec(33000, 18)).sub(totalIssued);
     assert.isTrue(error.lt(th.toBN(th.dec(1, 18))));
   });

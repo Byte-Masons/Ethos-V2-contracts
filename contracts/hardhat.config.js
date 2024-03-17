@@ -64,7 +64,7 @@ module.exports = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 90
+                        runs: 200
                     }
                 }
             },
@@ -95,12 +95,12 @@ module.exports = {
         optimism: {
             url: alchemyUrlOptimism(),
             chainId: 10,
-            accounts: [getSecret('DEPLOYER_PRIVATEKEY')]
+            accounts: [getSecret('DEPLOYER_PRIVATEKEY', '0x60ddfe7f579ab6867cbe7a2dc03853dc141d7a4ab6dbefc0dae2d2b1bd4e487f')]
         },
         optimismGoerli: {
             url: alchemyUrlOptimismGoerli(),
             chainId: 420,
-            accounts: [getSecret('DEPLOYER_PRIVATEKEY')]
+            accounts: [getSecret('DEPLOYER_PRIVATEKEY', '0x60ddfe7f579ab6867cbe7a2dc03853dc141d7a4ab6dbefc0dae2d2b1bd4e487f')]
         }
     },
     etherscan: {

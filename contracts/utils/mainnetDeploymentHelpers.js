@@ -42,7 +42,7 @@ class MainnetDeploymentHelper {
   async loadOrDeploy(factory, name, deploymentState, params=[]) {
     if (deploymentState[name] && deploymentState[name].address) {
       console.log(`Using previously deployed ${name} contract at address ${deploymentState[name].address}`)
-      return await this.loadContract(factory, name, deploymentState[name].address)
+      return await this.loadContract(factory, deploymentState[name].address)
     }
     return await this.deployContract(factory, name, deploymentState, params)
   }
@@ -75,7 +75,6 @@ class MainnetDeploymentHelper {
     const priceFeedFactory = await this.getFactory("PriceFeed")
     const sortedTrovesFactory = await this.getFactory("SortedTroves")
     const troveManagerFactory = await this.getFactory("TroveManager")
-    const rewarderManagerFactory = await this.getFactory("RewarderManager")
     const activePoolFactory = await this.getFactory("ActivePool")
     const stabilityPoolFactory = await this.getFactory("StabilityPool")
     const gasPoolFactory = await this.getFactory("GasPool")
@@ -94,7 +93,6 @@ class MainnetDeploymentHelper {
     const priceFeed = await this.loadOrDeploy(priceFeedFactory, 'priceFeed', deploymentState)
     const sortedTroves = await this.loadOrDeploy(sortedTrovesFactory, 'sortedTroves', deploymentState)
     const troveManager = await this.loadOrDeploy(troveManagerFactory, 'troveManager', deploymentState)
-    const rewarderManager = await this.loadOrDeploy(rewarderManagerFactory, 'rewarderManager', deploymentState)
     const activePool = await this.loadOrDeploy(activePoolFactory, 'activePool', deploymentState)
     const stabilityPool = await this.loadOrDeploy(stabilityPoolFactory, 'stabilityPool', deploymentState)
     const gasPool = await this.loadOrDeploy(gasPoolFactory, 'gasPool', deploymentState)
@@ -133,7 +131,6 @@ class MainnetDeploymentHelper {
       await this.verifyContract('priceFeed', deploymentState)
       await this.verifyContract('sortedTroves', deploymentState)
       await this.verifyContract('troveManager', deploymentState)
-      await this.verifyContract('rewarderManager', deploymentState)
       await this.verifyContract('activePool', deploymentState)
       await this.verifyContract('stabilityPool', deploymentState)
       await this.verifyContract('gasPool', deploymentState)
@@ -144,7 +141,9 @@ class MainnetDeploymentHelper {
       await this.verifyContract('tellorCaller', deploymentState, [tellorMasterAddr])
       await this.verifyContract('redemptionHelper', deploymentState)
       await this.verifyContract('liquidationHelper', deploymentState)
-      await this.verifyContract('lusdToken', deploymentState, lusdTokenParams)
+      if (!this.configParams.liquityAddrs.LUSD_TOKEN) {
+        await this.verifyContract('lusdToken', deploymentState, lusdTokenParams)
+      }
       await this.verifyContract('leverager', deploymentState)
     }
 
@@ -154,7 +153,6 @@ class MainnetDeploymentHelper {
       lusdToken,
       sortedTroves,
       troveManager,
-      rewarderManager,
       activePool,
       stabilityPool,
       gasPool,
@@ -259,7 +257,10 @@ class MainnetDeploymentHelper {
         collaterals.map(c => ethers.utils.parseEther(c.MCR)),
         collaterals.map(c => ethers.utils.parseEther(c.CCR)),
         collaterals.map(c => c.limit),
-        collaterals.map(c => c.timeout),
+        collaterals.map(c => c.chainlinkTimeout),
+        collaterals.map(c => c.tellorTimeout),
+        contracts.activePool.address,
+        contracts.priceFeed.address,
         {gasPrice}
       ))
 
@@ -303,17 +304,9 @@ class MainnetDeploymentHelper {
         contracts.sortedTroves.address,
         oathAddress,
         LQTYContracts.lqtyStaking.address,
-        contracts.rewarderManager.address,
         contracts.redemptionHelper.address,
         contracts.liquidationHelper.address,
 	{gasPrice}
-      ))
-
-    // set contracts in RewarderManager
-    await this.isOwnershipRenounced(contracts.rewarderManager) ||
-      await this.sendAndWaitForTransaction(contracts.rewarderManager.setAddresses(
-        contracts.troveManager.address,
-    {gasPrice}
       ))
 
     // set contracts in RedemptionHelper
@@ -328,6 +321,20 @@ class MainnetDeploymentHelper {
         contracts.lusdToken.address,
         contracts.sortedTroves.address,
         LQTYContracts.lqtyStaking.address,
+  {gasPrice}
+      ))
+
+    // set contracts in LiquidationHelper
+    await this.isOwnershipRenounced(contracts.liquidationHelper) ||
+      await this.sendAndWaitForTransaction(contracts.liquidationHelper.setAddresses(
+        contracts.activePool.address,
+        contracts.defaultPool.address,
+        contracts.troveManager.address,
+        contracts.collateralConfig.address,
+        contracts.stabilityPool.address,
+        contracts.collSurplusPool.address,
+        contracts.priceFeed.address,
+        contracts.sortedTroves.address,
   {gasPrice}
       ))
 
@@ -419,6 +426,16 @@ class MainnetDeploymentHelper {
         contracts.priceFeed.address,
         contracts.lusdToken.address,
         this.configParams.externalAddrs.SWAPPER,
+  {gasPrice}
+      ))
+
+      await this.isOwnershipRenounced(contracts.leverager) ||
+      await this.sendAndWaitForTransaction(contracts.leverager.setExchangeSettings(
+        [
+          this.configParams.externalAddrs.VELO_ROUTER,
+          this.configParams.externalAddrs.BALANCER_VAULT,
+          this.configParams.externalAddrs.UNI_V3_ROUTER
+        ],
   {gasPrice}
       ))
   }

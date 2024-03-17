@@ -686,8 +686,8 @@ contract('LQTYStaking revenue share tests', async accounts => {
     await assertRevert(unstakeTxPromise2)
   })
 
-  it('Test requireCallerIsTroveManager', async () => {
+  it('Test requireCallerIsRedemptionHelper', async () => {
     const lqtyStakingTester = await LQTYStakingTester.new()
-    await assertRevert(lqtyStakingTester.requireCallerIsTroveMorRH(), 'LQTYStaking: caller is not TroveM')
+    await assertRevert(lqtyStakingTester.requireCallerIsRedemptionHelper(), 'LQTYStaking: caller is not RedemptionHelper')
   })
 })

@@ -124,6 +124,13 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
         addressesSet = true;
     }
 
+    function setYieldGenerator(address _collateral, address _vault) external override {
+        _requireCallerIsOwnerOrCollateralConfig();
+        require(yieldingAmount[_collateral] == 0, "All assets not withdrawn from previous vault");
+        require(IReaperVaultV2(_vault).token() == _collateral, "Vault asset must be collateral");
+        yieldGenerator[_collateral] = _vault;
+    }
+
     function setYieldingPercentage(address _collateral, uint256 _bps) external onlyOwner {
         _requireValidCollateralAddress(_collateral);
         require(_bps <= 10_000, "Invalid BPS value");
@@ -339,5 +346,10 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
             msg.sender == borrowerOperationsAddress ||
             msg.sender == troveManagerAddress,
             "ActivePool: Caller is neither BorrowerOperations nor TroveManager");
+    }
+
+    function _requireCallerIsOwnerOrCollateralConfig() internal view {
+        require(msg.sender == owner() || msg.sender == collateralConfigAddress,
+            "ActivePool: Caller is neither owner nor CollateralConfig");
     }
 }

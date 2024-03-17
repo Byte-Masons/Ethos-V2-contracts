@@ -331,20 +331,12 @@ contract StabilityPool is LiquityBase, Ownable, CheckContract, IStabilityPool {
     function provideToSP(uint _amount) external override {
         _requireNonZeroAmount(_amount);
 
-        uint initialDeposit = deposits[msg.sender].initialValue;
-
         ICommunityIssuance communityIssuanceCached = communityIssuance;
 
         _triggerLQTYIssuance(communityIssuanceCached);
 
         (address[] memory assets, uint[] memory amounts) = getDepositorCollateralGain(msg.sender);
         uint compoundedLUSDDeposit = getCompoundedLUSDDeposit(msg.sender);
-
-        /* TODO tess3rac7 unused var, but previously included in ETHGainWithdrawn event log.
-         * Doesn't make a lot of sense to include in multiple CollateralGainWithdrawn logs.
-         * If needed could create a separate event just to report this.
-         */
-        uint LUSDLoss = initialDeposit.sub(compoundedLUSDDeposit); // Needed only for event log
 
         // First pay out any LQTY gains
         _payOutLQTYGains(communityIssuanceCached, msg.sender);
@@ -384,12 +376,6 @@ contract StabilityPool is LiquityBase, Ownable, CheckContract, IStabilityPool {
         (address[] memory assets, uint[] memory amounts) = getDepositorCollateralGain(msg.sender);
         uint compoundedLUSDDeposit = getCompoundedLUSDDeposit(msg.sender);
         uint LUSDtoWithdraw = LiquityMath._min(_amount, compoundedLUSDDeposit);
-
-        /* TODO tess3rac7 unused var, but previously included in ETHGainWithdrawn event log.
-         * Doesn't make a lot of sense to include in multiple CollateralGainWithdrawn logs.
-         * If needed could create a separate event just to report this.
-         */
-        uint LUSDLoss = initialDeposit.sub(compoundedLUSDDeposit); // Needed only for event log
 
         // First pay out any LQTY gains
         _payOutLQTYGains(communityIssuanceCached, msg.sender);

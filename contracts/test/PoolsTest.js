@@ -80,14 +80,16 @@ contract('ActivePool', async accounts => {
       [toBN(dec(12, 17)), toBN(dec(13, 17))], // MCR for WETH at 120%, and for WBTC at 130%
       [toBN(dec(165, 16)), toBN(dec(18, 17))], // CCR for WETH at 165%, and for WBTC at 180%
       [ethers.constants.MaxUint256, ethers.constants.MaxUint256],
-      [14400, 14400] // 4 hour oracle timeouts
+      [14400, 14400], // 4 hour Chainlink timeouts
+      [14400, 14400], // 4 hour Tellor timeouts
+      activePool.address,
+      dumbContractAddress,
     )
 
     await troveManager.setAddresses(
       mockBorrowerOperations.address,
       collateralConfig.address,
       activePool.address,
-      dumbContractAddress,
       dumbContractAddress,
       dumbContractAddress,
       dumbContractAddress,
@@ -876,12 +878,16 @@ contract('DefaultPool', async accounts => {
     collateralConfig = await CollateralConfig.new()
     mockTroveManager = await NonPayable.new()
     mockActivePool = await NonPayable.new()
+    const mockPriceFeed = await NonPayable.new()
     await collateralConfig.initialize(
       collaterals.map(c => c.address),
       [toBN(dec(12, 17)), toBN(dec(13, 17))], // MCR for WETH at 120%, and for WBTC at 130%
       [toBN(dec(165, 16)), toBN(dec(18, 17))], // CCR for WETH at 165%, and for WBTC at 180%
       [ethers.constants.MaxUint256, ethers.constants.MaxUint256],
-      [14400, 14400] // 4 hour oracle timeouts
+      [14400, 14400], // 4 hour Chainlink timeouts
+      [14400, 14400], // 4 hour Tellor timeouts
+      mockActivePool.address,
+      mockPriceFeed.address,
     )
     await defaultPool.setAddresses(collateralConfig.address, mockTroveManager.address, mockActivePool.address)
   })

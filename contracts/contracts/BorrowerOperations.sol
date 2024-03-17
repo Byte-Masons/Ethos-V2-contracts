@@ -187,7 +187,6 @@ contract BorrowerOperations is LiquityBase, Ownable, CheckContract, IBorrowerOpe
     }
 
     function setExemptFromFee(address _borrower, bool _isExempt) external onlyOwner {
-        checkContract(_borrower);
         exemptFromFee[_borrower] = _isExempt;
         emit SetFeeExemption(_borrower, _isExempt);
     }

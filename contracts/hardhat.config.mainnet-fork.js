@@ -47,7 +47,7 @@ module.exports = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 90
+                        runs: 200
                     }
                 }
             },
@@ -58,7 +58,7 @@ module.exports = {
             accounts: accountsList.slice(0, 2),
             forking: {
                 url: alchemyUrl(),
-                blockNumber: 108704600,
+                blockNumber: 113763000,
             }
         }
     },

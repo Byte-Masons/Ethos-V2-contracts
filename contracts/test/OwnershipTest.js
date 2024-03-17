@@ -37,7 +37,10 @@ contract('All Liquity functions with onlyOwner modifier', async accounts => {
       [toBN(dec(12, 17)), toBN(dec(13, 17))], // MCR for WETH at 120%, and for WBTC at 130%
       [toBN(dec(165, 16)), toBN(dec(18, 17))], // CCR for WETH at 165%, and for WBTC at 180%
       [ethers.constants.MaxUint256, ethers.constants.MaxUint256],
-      [14400, 14400] // 4 hour oracle timeouts
+      [14400, 14400], // 4 hour Chainlink timeouts
+      [14400, 14400], // 4 hour Tellor timeouts
+      contracts.activePool.address,
+      contracts.priceFeedTestnet.address,
     )
 
     lusdToken = contracts.lusdToken
@@ -110,7 +113,7 @@ contract('All Liquity functions with onlyOwner modifier', async accounts => {
 
   describe('TroveManager', async accounts => {
     it("setAddresses(): reverts when called by non-owner, with wrong addresses, or twice", async () => {
-      await testSetAddresses(troveManager, 14)
+      await testSetAddresses(troveManager, 13)
     })
   })
 

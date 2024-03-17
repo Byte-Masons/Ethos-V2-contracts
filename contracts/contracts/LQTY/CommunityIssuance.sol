@@ -25,7 +25,7 @@ contract CommunityIssuance is ICommunityIssuance, Ownable, CheckContract, BaseMa
 
     address public stabilityPoolAddress;
 
-    uint256 public totalOATHIssued;
+    mapping(IERC20 => uint256) public totalOATHIssued;
     uint256 public lastDistributionTime;
     uint256 public distributionPeriod;
     uint256 internal _rewardPerSecond;
@@ -37,7 +37,7 @@ contract CommunityIssuance is ICommunityIssuance, Ownable, CheckContract, BaseMa
     event OathTokenAddressSet(address _oathTokenAddress);
     event LogRewardPerSecond(uint256 _rewardPerSecond);
     event StabilityPoolAddressSet(address _stabilityPoolAddress);
-    event TotalOATHIssuedUpdated(uint256 _totalOATHIssued);
+    event TotalOATHIssuedUpdated(IERC20 indexed _oathTokenAddress, uint256 _totalOATHIssued);
 
     // --- Functions ---
 
@@ -67,24 +67,32 @@ contract CommunityIssuance is ICommunityIssuance, Ownable, CheckContract, BaseMa
         emit StabilityPoolAddressSet(_stabilityPoolAddress);
     }
 
+    function setOathToken(address _oathTokenAddress) external onlyOwner {
+        require(lastIssuanceTimestamp >= lastDistributionTime, "last distribution has not been fully issued");
+        checkContract(_oathTokenAddress);
+        oathToken = IERC20(_oathTokenAddress);
+        emit OathTokenAddressSet(_oathTokenAddress);
+    }
+
     // @dev issues a set amount of Oath to the stability pool
     function issueOath() external override returns (uint256 issuance) {
         _requireCallerIsStabilityPool();
 
         uint256 _lastIssuanceTimestamp = lastIssuanceTimestamp;
         uint256 _lastDistributionTime = lastDistributionTime;
-        uint256 _totalOATHIssued = totalOATHIssued;
+        IERC20 _oathToken = oathToken;
+        uint256 _totalOATHIssued = totalOATHIssued[_oathToken];
         if (_lastIssuanceTimestamp < _lastDistributionTime) {
             uint256 endTimestamp = block.timestamp > _lastDistributionTime ? _lastDistributionTime : block.timestamp;
             uint256 timePassed = endTimestamp.sub(_lastIssuanceTimestamp);
             issuance = getRewardAmount(timePassed);
 
             _totalOATHIssued = _totalOATHIssued.add(issuance);
-            totalOATHIssued = _totalOATHIssued;
+            totalOATHIssued[_oathToken] = _totalOATHIssued;
+            emit TotalOATHIssuedUpdated(_oathToken, _totalOATHIssued);
         }
 
         lastIssuanceTimestamp = block.timestamp;
-        emit TotalOATHIssuedUpdated(_totalOATHIssued);
     }
 
     /*

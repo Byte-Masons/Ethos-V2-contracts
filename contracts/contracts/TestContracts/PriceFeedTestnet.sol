@@ -31,4 +31,11 @@ contract PriceFeedTestnet is IPriceFeed {
         _price[_collateral] = price;
         return true;
     }
+
+    // Not needed since we're not actually querying oracles
+    function updateChainlinkAggregator(
+        address _collateral,
+        address _priceAggregatorAddress
+    ) external override {}
+    function updateTellorQueryID(address _collateral, bytes32 _queryId) external override {}
 }

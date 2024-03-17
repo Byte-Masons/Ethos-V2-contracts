@@ -1,3 +1,5 @@
+const NonPayable = artifacts.require("./NonPayable.sol")
+
 const { expect } = require('chai');
 const deploymentHelper = require("../utils/deploymentHelpers.js")
 
@@ -69,7 +71,10 @@ contract('CollateralConfig', async accounts => {
         [toBN(dec(12, 17)), toBN(dec(13, 17))], // MCR for WETH at 120%, and for WBTC at 130%
         [toBN(dec(165, 16)), toBN(dec(18, 17))], // CCR for WETH at 165%, and for WBTC at 180%
         [ethers.constants.MaxUint256, ethers.constants.MaxUint256],
-        [14400, 14400] // 4 hour oracle timeouts
+        [14400, 14400], // 4 hour Chainlink timeouts
+        [14400, 14400], // 4 hour Tellor timeouts
+        coreContracts.activePool.address,
+        coreContracts.priceFeedTestnet.address,
       ),
       "Can only initialize once"
     );
@@ -159,13 +164,18 @@ contract('CollateralConfig', async accounts => {
   })
 
   it('cannot add existing collateral', async () => {
+    const mockChainlinkAggregator = await NonPayable.new()
     await assertRevert(
       collateralConfig.addNewCollateral(
         collaterals[0].address,
         toBN(dec(12, 17)),
         toBN(dec(165, 16)),
         ethers.constants.MaxUint256,
-        14400
+        14400,
+        14400,
+        coreContracts.reapervaults[1].address,
+        mockChainlinkAggregator.address,
+        "0x1",
       ),
       "collateral already allowed"
     )
